@@ -2,12 +2,16 @@ from image import Image
 from ray import Ray
 from point import Point
 from color import Color
+from material import Material
+import random
+import canvas
 
 class RenderEngine:
 	"""Renders 3D objects into 2D objects"""
-	def render(self, scene):
+	def render(self, scene, samples):
 		width = scene.width
 		height = scene.height
+		canvas.set_size(width, height)
 		aspect_ratio = float(width) / height
 		x0 = -1.0
 		x1 = +1.0
@@ -19,12 +23,28 @@ class RenderEngine:
 		camera = scene.camera
 		pixels = Image(width, height)
 		
-		for j in range(height):
+		heightRange = list(range(height))
+		widthRange = list(range(width))
+		
+		#random.shuffle(heightRange)
+		#random.shuffle(widthRange)
+		
+		for j in heightRange:
 			y = y0 + j * ystep
-			for i in range(width):
+			for i in widthRange:
 				x = x0 + i * xstep
-				ray = Ray(camera, Point(x,y) - camera)
-				pixels.set_pixel(i, j, self.ray_trace(ray, scene))
+				renderedSamples = []
+				for _ in range(samples):
+					if samples > 1:
+						ray = Ray(camera, Point(x+random.uniform(xstep*-1,xstep),y+random.uniform(xstep*-1,ystep)) - camera)
+					else:
+						ray = Ray(camera, Point(x,y) - camera)
+					raytracedColorSample = self.ray_trace(ray, scene)
+					renderedSamples.append(raytracedColorSample)
+				finalPixel = sum(renderedSamples, Color(0,0,0)) / len(renderedSamples)
+				pixels.set_pixel(i, j, finalPixel)
+				canvas.set_fill_color(finalPixel.x, finalPixel.y, finalPixel.z)
+				canvas.fill_rect(i, j, 1, 1)
 		return pixels
 		
 	def ray_trace(self, ray, scene):
